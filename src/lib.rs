@@ -72,6 +72,7 @@ fn lint_errors(file: &PathBuf) -> Vec<LintError> {
 fn lint_statement(stmt: &ast::Statement) -> Vec<LintError> {
     return match stmt {
         ast::Statement::AlterTable{name: _, operation} => lint_alter_table(operation),
+        ast::Statement::CreateIndex{name, concurrently, ..} => lint_create_index(name, *concurrently),
         _ => Vec::new(),
     };
 }
@@ -95,6 +96,15 @@ fn lint_add_column(def: &ast::ColumnDef) -> Vec<LintError> {
     }).collect::<Vec<_>>();
 }
 
+fn lint_create_index(name: &ast::ObjectName, concurrently: bool) -> Vec<LintError> {
+    return if concurrently {
+        Vec::new()
+    } else {
+        vec![LintError::new(ErrorCode::NonConcurrentIndex, format!(
+            "Index {} is created without CONCURRENTLY. This requires holding an exclusive table lock while the index is built, which can cause downtime.", name).as_str())]
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -106,9 +116,27 @@ mod tests {
     }
 
     #[test]
+    fn test_lint_add_column_without_default() {
+        let errors = lint_errors(&PathBuf::from("test_data/add_column_without_default.sql"));
+        assert_eq!(0, errors.len());
+    }
+
+    #[test]
     fn test_lint_add_column_with_default() {
         let errors = lint_errors(&PathBuf::from("test_data/add_column_with_default.sql"));
         assert_eq!(vec![LintError::new(ErrorCode::DefaultValue, "")], errors);
+    }
+
+    #[test]
+    fn test_lint_create_index_sync() {
+        let errors = lint_errors(&PathBuf::from("test_data/create_index_sync.sql"));
+        assert_eq!(vec![LintError::new(ErrorCode::NonConcurrentIndex, "")], errors);
+    }
+
+    #[test]
+    fn test_lint_create_index_async() {
+        let errors = lint_errors(&PathBuf::from("test_data/create_index_async.sql"));
+        assert_eq!(0, errors.len());
     }
 
 }
