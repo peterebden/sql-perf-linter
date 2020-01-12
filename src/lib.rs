@@ -11,7 +11,7 @@ pub fn lint(files: Vec<PathBuf>) -> bool {
     return files.iter().fold(true, |success, file| success && lint_one(file));
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 enum ErrorCode {
     FileError = 1,
     SyntaxError = 2,
@@ -25,12 +25,23 @@ impl fmt::Display for ErrorCode {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 struct LintError {
     code: ErrorCode,
     line: u32,
     col: u32,
     message: String,
+}
+
+impl PartialEq for LintError {
+    // Ignore the details of the message for the purpose of comparison.
+    fn eq(&self, other: &LintError) -> bool {
+        return self.code == other.code && self.line == other.line && self.col == other.col;
+    }
+}
+
+fn err(code: ErrorCode, line: u32, col: u32, message: &str) -> LintError {
+    return LintError{code: code, line: line, col: col, message: message.to_string()};
 }
 
 fn lint_one(file: &PathBuf) -> bool {
@@ -62,5 +73,18 @@ fn lint_statement(stmt: &ast::Statement) -> Vec<LintError> {
 }
 
 fn lint_alter_table(operation: &ast::AlterTableOperation) -> Vec<LintError> {
+    error!("op: {}", operation);
     return Vec::new();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_lint_add_column_with_default() {
+        let errors = lint_errors(&PathBuf::from("test_data/add_column_with_default.sql"));
+        assert_eq!(vec![err(ErrorCode::DefaultValue, 2, 1, "")], errors);
+    }
+
 }
