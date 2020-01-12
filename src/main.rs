@@ -20,10 +20,5 @@ fn main() {
         .verbosity(opts.verbose)
         .init()
         .unwrap();
-    let code = if linter::lint(opts.files) {
-        0
-    } else {
-        1
-    };
-    std::process::exit(code);
+    std::process::exit(if linter::lint(opts.files) { 0 } else { 1 });
 }

@@ -1,4 +1,3 @@
-use std::fmt;
 use std::fs;
 use std::path::PathBuf;
 use sqlparser::ast;
@@ -15,17 +14,11 @@ pub fn lint(files: Vec<PathBuf>) -> bool {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum ErrorCode {
-    FileError = 1,
-    SyntaxError = 2,
-    NotNullColumn = 3,
-    DefaultValue = 4,
-    NonConcurrentIndex = 5,
-}
-
-impl fmt::Display for ErrorCode {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self)
-    }
+    FileError,
+    SyntaxError,
+    NotNullColumn,
+    DefaultValue,
+    NonConcurrentIndex,
 }
 
 #[derive(Debug, Clone)]
@@ -50,10 +43,11 @@ impl LintError {
 
 fn lint_one(file: &PathBuf) -> bool {
     debug!("Linting {}...", file.as_path().to_string_lossy());
-    return lint_errors(file).iter().fold(true, |_, e| {
-        println!("{}::E{}:{}", file.as_path().to_string_lossy(), e.code, e.message);
-        false
-    })
+    let errors = lint_errors(file);
+    errors.iter().for_each(|e| {
+        println!("{}:{:?}:{}", file.as_path().to_string_lossy(), e.code, e.message);
+    });
+    errors.is_empty()
 }
 
 fn lint_errors(file: &PathBuf) -> Vec<LintError> {
