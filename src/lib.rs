@@ -15,8 +15,9 @@ pub fn lint(files: Vec<PathBuf>) -> bool {
 enum ErrorCode {
     FileError = 1,
     SyntaxError = 2,
-    DefaultValue = 3,
-    NonConcurrentIndex = 4,
+    NotNullColumn = 3,
+    DefaultValue = 4,
+    NonConcurrentIndex = 5,
 }
 
 impl fmt::Display for ErrorCode {
@@ -73,13 +74,33 @@ fn lint_statement(stmt: &ast::Statement) -> Vec<LintError> {
 }
 
 fn lint_alter_table(operation: &ast::AlterTableOperation) -> Vec<LintError> {
-    error!("op: {}", operation);
-    return Vec::new();
+    return match operation {
+        ast::AlterTableOperation::AddColumn(def) => lint_add_column(def),
+        _ => Vec::new(),
+    };
+}
+
+fn lint_add_column(def: &ast::ColumnDef) -> Vec<LintError> {
+    return def.options.iter().filter_map(|opt| {
+        match opt.option {
+            ast::ColumnOption::NotNull => Some(err(ErrorCode::NotNullColumn, 1, 1, format!(
+                "Column {} is added with the NOT NULL option. This can case a full table rewrite which can be very slow.", def.name).as_str())),
+            ast::ColumnOption::Default(_) => Some(err(ErrorCode::NotNullColumn, 1, 1, format!(
+                "Column {} is added with a default value. This can case a full table rewrite which can be very slow.", def.name).as_str())),
+            _ => None,
+        }
+    }).collect::<Vec<_>>();
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_create_table() {
+        let errors = lint_errors(&PathBuf::from("test_data/create_table.sql"));
+        assert_eq!(0, errors.len());
+    }
 
     #[test]
     fn test_lint_add_column_with_default() {
