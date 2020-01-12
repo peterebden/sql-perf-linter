@@ -1,1 +1,1 @@
-ALTER TABLE characters ADD COLUMN blah VARCHAR;
+ALTER TABLE characters ADD COLUMN level INT DEFAULT 1;
