@@ -1,0 +1,23 @@
+[package]
+name = "sql-perf-linter"
+version = "0.1.0"
+authors = ["Peter Ebden <peter.ebden@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+structopt = "0.3.5"
+log = "0.4.8"
+stderrlog = "0.4.3"
+sqlparser = "0.5.0"
+
+[lib]
+name = "linter"
+path = "src/lib.rs"
+
+[[bin]]
+name = "sql-perf-linter"
+path = "src/main.rs"
+
+[profile.release]
+lto = true
+panic = 'abort'
