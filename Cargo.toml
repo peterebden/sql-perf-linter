@@ -11,7 +11,7 @@ stderrlog = "0.4.3"
 sqlparser = "0.5.1-alpha-0"
 
 [patch.crates-io]
-sqlparser = { git = 'https://github.com/peterebden/sqlparser-rs', branch = 'create-index' }
+sqlparser = { git = 'https://github.com/peterebden/sqlparser-rs', branch = 'add-alter-rename' }
 
 [lib]
 name = "linter"

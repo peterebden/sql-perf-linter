@@ -19,6 +19,8 @@ enum ErrorCode {
     NotNullColumn,
     DefaultValue,
     NonConcurrentIndex,
+    RenameColumn,
+    RenameTable,
 }
 
 #[derive(Debug, Clone)]
@@ -65,15 +67,19 @@ fn lint_errors(file: &PathBuf) -> Vec<LintError> {
 
 fn lint_statement(stmt: &ast::Statement) -> Vec<LintError> {
     return match stmt {
-        ast::Statement::AlterTable{name: _, operation} => lint_alter_table(operation),
+        ast::Statement::AlterTable{name, operation} => lint_alter_table(name, operation),
         ast::Statement::CreateIndex{name, concurrently, ..} => lint_create_index(name, *concurrently),
         _ => Vec::new(),
     };
 }
 
-fn lint_alter_table(operation: &ast::AlterTableOperation) -> Vec<LintError> {
+fn lint_alter_table(name: &ast::ObjectName, operation: &ast::AlterTableOperation) -> Vec<LintError> {
     return match operation {
         ast::AlterTableOperation::AddColumn(def) => lint_add_column(def),
+        ast::AlterTableOperation::RenameColumn{column, to} =>
+            vec![LintError::new(ErrorCode::RenameColumn, format!("Column {} is being renamed to {}, this is never a safe operation.", column, to).as_str())],
+        ast::AlterTableOperation::RenameTable{to} =>
+            vec![LintError::new(ErrorCode::RenameTable, format!("Table {} is being renamed to {} , this is never a safe operation.", name, to).as_str())],
         _ => Vec::new(),
     };
 }
@@ -133,4 +139,9 @@ mod tests {
         assert_eq!(0, errors.len());
     }
 
+    #[test]
+    fn test_lint_rename_column() {
+        let errors = lint_errors(&PathBuf::from("test_data/rename_table.sql"));
+        assert_eq!(vec![LintError::new(ErrorCode::RenameTable, "")], errors);
+    }
 }
